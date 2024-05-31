@@ -1,12 +1,16 @@
 import torch
 from torchvision import datasets
+from torch.utils.data import DataLoader
 from torch.utils.data import random_split
 from torchvision.transforms import ToTensor
 
 
 class DataPrepper:
     def __init__(
-        self, root="Datasets", download=False, val_ratio=0, manual_seed=42
+        self,
+        root="Datasets",
+        download=False,
+        val_ratio=0,
     ) -> None:
         if val_ratio < 0 or val_ratio >= 1:
             raise ValueError("Validation ratio has to be in [0,1)")
@@ -14,7 +18,6 @@ class DataPrepper:
         self.root = root
         self.download = download
         self.val_ratio = val_ratio
-        self.manual_seed = manual_seed
 
     def get_datasets(self):
         cifar100_training = datasets.CIFAR100(
@@ -42,11 +45,17 @@ class DataPrepper:
         training_set, val_set = random_split(
             cifar100_training,
             [1 - self.val_ratio, self.val_ratio],
-            generator=torch.Generator().manual_seed(self.manual_seed),
+            generator=torch.Generator(),
         )
         return (training_set, cifar100_testing, val_set)
 
-    def get_dataloaders(self):
+    def get_dataloaders(self, **kwargs):
         train_set, test_set, val_set = self.get_datasets()
-        # wip
-        pass
+        if val_set:
+            return (
+                DataLoader(train_set, kwargs),
+                DataLoader(test_set, kwargs),
+                DataLoader(val_set, kwargs),
+            )
+
+        return DataLoader(train_set, kwargs), DataLoader(test_set, kwargs)
