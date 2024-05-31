@@ -4,21 +4,10 @@ from torch.utils.data import random_split
 from torchvision.transforms import ToTensor
 
 
-class CIFAR100Transform(object):
-    """Convert PIL images in sample to Tensors. Convert target classes in sample to one hot"""
-
-    def __call__(self, sample):
-        data, target = sample[0], sample[1]
-        to_tensor_transformer = ToTensor()
-
-        return (
-            to_tensor_transformer(data),
-            torch.nn.functional.one_hot(target, num_classes=100),
-        )
-
-
 class DataPrepper:
-    def __init__(self, root, download=False, val_ratio=0, manual_seed=42) -> None:
+    def __init__(
+        self, root="Datasets", download=False, val_ratio=0, manual_seed=42
+    ) -> None:
         if val_ratio < 0 or val_ratio >= 1:
             raise ValueError("Validation ratio has to be in [0,1)")
 
@@ -32,13 +21,19 @@ class DataPrepper:
             root=self.root,
             train=True,
             download=self.download,
-            transform=CIFAR100Transform(),
+            transform=ToTensor(),
+            target_transform=(
+                lambda t: torch.nn.functional.one_hot(torch.tensor(t), num_classes=100)
+            ),
         )
         cifar100_testing = datasets.CIFAR100(
             root=self.root,
             train=False,
             download=self.download,
-            transform=CIFAR100Transform(),
+            transform=ToTensor(),
+            target_transform=(
+                lambda t: torch.nn.functional.one_hot(torch.tensor(t), num_classes=100)
+            ),
         )
 
         if self.val_ratio == 0:
