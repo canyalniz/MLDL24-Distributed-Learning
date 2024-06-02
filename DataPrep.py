@@ -25,9 +25,6 @@ class DataPrepper:
             train=True,
             download=self.download,
             transform=ToTensor(),
-            target_transform=(
-                lambda t: torch.nn.functional.one_hot(torch.tensor(t), num_classes=100)
-            ),
         )
         cifar100_testing = datasets.CIFAR100(
             root=self.root,
