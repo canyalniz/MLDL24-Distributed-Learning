@@ -53,9 +53,9 @@ class DataPrepper:
         train_set, test_set, val_set = self.get_datasets()
         if val_set:
             return (
-                DataLoader(train_set, kwargs),
-                DataLoader(test_set, kwargs),
-                DataLoader(val_set, kwargs),
+                DataLoader(train_set, **kwargs),
+                DataLoader(test_set, **kwargs),
+                DataLoader(val_set, **kwargs),
             )
 
-        return DataLoader(train_set, kwargs), DataLoader(test_set, kwargs)
+        return DataLoader(train_set, **kwargs), DataLoader(test_set, **kwargs)
