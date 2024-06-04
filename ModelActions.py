@@ -77,3 +77,22 @@ def train_for_epochs(
             )
 
             model.train(True)
+
+
+def single_optimizer_step(
+    model,
+    batch,
+    optimizer,
+    loss_fn,
+):
+    data, target = batch
+    data = data.to("cuda")
+    target = target.to("cuda")
+
+    optimizer.zero_grad()
+
+    logits = model(data)
+    loss = loss_fn(logits, target)
+    loss.backward()
+
+    optimizer.step()
