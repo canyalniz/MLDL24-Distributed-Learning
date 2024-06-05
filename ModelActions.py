@@ -35,8 +35,8 @@ def train_for_epochs(
         success_train_pred = 0
         num_samples = 0
         for data, target in train_loader:
-            data = data.to("cuda")
-            target = target.to("cuda")
+            # data = data.to("cuda")
+            # target = target.to("cuda")
 
             optimizer.zero_grad()
 
@@ -80,9 +80,6 @@ def train_for_epochs(
             model.eval()
 
             for data, target in val_loader:
-                data = data.to("cuda")
-                target = target.to("cuda")
-
                 with torch.no_grad():
                     logits = model(data)
 

@@ -1,8 +1,36 @@
 import torch
 from torchvision import datasets
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from torch.utils.data import random_split
 from torchvision.transforms import ToTensor
+
+
+class Cifar100CudaDataset(Dataset):
+    def __init__(
+        self, root="Datasets", train=True, download=False, transform=ToTensor()
+    ) -> None:
+        cifar100 = datasets.CIFAR100(
+            root=root,
+            train=train,
+            download=download,
+            transform=transform,
+        )
+
+        self.len = cifar100.__len__()
+        batch_loader = DataLoader(
+            dataset=cifar100, batch_size=self.len, pin_memory=True
+        )
+
+        data, target = next(iter(batch_loader))
+
+        self.data = data.to("cuda")
+        self.target = target.to("cuda")
+
+    def __len__(self):
+        return self.len
+
+    def __getitem__(self, index):
+        return self.data[index], self.target[index]
 
 
 class DataPrepper:
@@ -20,20 +48,17 @@ class DataPrepper:
         self.val_ratio = val_ratio
 
     def get_datasets(self):
-        cifar100_training = datasets.CIFAR100(
+        cifar100_training = Cifar100CudaDataset(
             root=self.root,
             train=True,
             download=self.download,
             transform=ToTensor(),
         )
-        cifar100_testing = datasets.CIFAR100(
+        cifar100_testing = Cifar100CudaDataset(
             root=self.root,
             train=False,
             download=self.download,
             transform=ToTensor(),
-            target_transform=(
-                lambda t: torch.nn.functional.one_hot(torch.tensor(t), num_classes=100)
-            ),
         )
 
         if self.val_ratio == 0:
@@ -46,13 +71,24 @@ class DataPrepper:
         )
         return (training_set, cifar100_testing, val_set)
 
-    def get_dataloaders(self, **kwargs):
+    def get_dataloaders(self, batch_size=32, val_full_batchsize=False, **kwargs):
         train_set, test_set, val_set = self.get_datasets()
         if val_set:
-            return (
-                DataLoader(train_set, **kwargs),
-                DataLoader(test_set, **kwargs),
-                DataLoader(val_set, **kwargs),
-            )
+            if val_full_batchsize:
+                return (
+                    DataLoader(train_set, batch_size=batch_size, **kwargs),
+                    DataLoader(test_set, batch_size=batch_size, **kwargs),
+                    DataLoader(
+                        val_set, batch_size=int(val_set.__len__() / 2), **kwargs
+                    ),
+                )
+            else:
+                return (
+                    DataLoader(train_set, batch_size=batch_size, **kwargs),
+                    DataLoader(test_set, batch_size=batch_size, **kwargs),
+                    DataLoader(val_set, batch_size=batch_size, **kwargs),
+                )
 
-        return DataLoader(train_set, **kwargs), DataLoader(test_set, **kwargs)
+        return DataLoader(train_set, batch_size=batch_size, **kwargs), DataLoader(
+            test_set, batch_size=batch_size, **kwargs
+        )
