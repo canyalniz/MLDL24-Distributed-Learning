@@ -16,16 +16,18 @@ def train_for_epochs(
     save_model_epochs_period=None,
     skip_epochs_before_saving=0,
     model_save_dir="model_checkpoints",
+    run_id=None,
 ):
     global_steps = 0
     model.train(True)
 
-    train_start_id = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
     if not os.path.exists(model_save_dir):
         os.makedirs(model_save_dir)
 
-    run_path = os.path.join(model_save_dir, train_start_id)
+    if run_id is None:
+        run_id = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    run_path = os.path.join(model_save_dir, run_id)
     os.makedirs(run_path)
 
     for ep in range(epochs):
@@ -66,7 +68,7 @@ def train_for_epochs(
 
         if save_model_epochs_period:
             if ep > skip_epochs_before_saving and ep % save_model_epochs_period == 0:
-                identifier = f"{train_start_id}_ep{ep}"
+                identifier = f"{run_id}_ep{ep}"
                 path = os.path.join(run_path, identifier)
                 torch.save(model, path)
 
