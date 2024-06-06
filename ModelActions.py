@@ -11,7 +11,6 @@ def train_for_epochs(
     val_loader=None,
     epochs=5,
     epoch_lr_scheduler=None,
-    step_lr_scheduler=None,
     tb_writer=None,
     save_model_epochs_period=None,
     skip_epochs_before_saving=0,
@@ -48,9 +47,6 @@ def train_for_epochs(
 
             global_steps = global_steps + 1
             tb_writer.add_scalar("Train Loss per sample (steps)", loss, global_steps)
-
-            if step_lr_scheduler:
-                step_lr_scheduler.step()
 
             epoch_loss_value += loss
             success_train_pred += logits.argmax(1).eq(target).sum()
