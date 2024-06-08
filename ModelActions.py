@@ -36,7 +36,7 @@ def train_for_epochs_preloaded_cuda(
         for data, target in train_loader:
             optimizer.zero_grad()
 
-            logits = model.cuda_train_forward(data)
+            logits = model.cpl_train_forward(data)
             loss = loss_fn(logits, target)
             loss.backward()
 
@@ -75,7 +75,7 @@ def train_for_epochs_preloaded_cuda(
             for data, target in val_loader:
 
                 with torch.no_grad():
-                    logits = model.cuda_val_forward(data)
+                    logits = model.cpl_val_forward(data)
 
                 val_loss += loss_fn(logits, target)
                 success_val_pred += logits.argmax(1).eq(target).sum()
