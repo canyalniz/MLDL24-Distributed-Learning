@@ -13,26 +13,45 @@ from torch.utils.tensorboard import SummaryWriter
 
 epochs = 100
 preload_cuda = True
+uint8_augmentations_list = [
+    v2.RandomResizedCrop(size=(32, 32), antialias=True),
+    v2.RandomHorizontalFlip(p=0.5),
+]
+normalize = True
 
-dp = DataPrepper(
-    val_ratio=0.2,
-    normalize=True,
-)
-train_loader, test_loader, val_loader = dp.get_dataloaders(
-    batch_size=2048, num_workers=1, preload_cuda=preload_cuda
-)
 
-model = Network(
-    uint8_augmentations_list=[
-        v2.RandomResizedCrop(size=(32, 32), antialias=True),
-        v2.RandomHorizontalFlip(p=0.5),
-    ],
-    normalization_transform=v2.Normalize(
-        dp.training_channel_means, dp.training_channel_stds
-    ),
-)
+if preload_cuda:
+    dp = DataPrepper(
+        val_ratio=0.2,
+    )
+    train_loader, test_loader, val_loader = dp.get_dataloaders(
+        batch_size=2048, num_workers=0, preload_cuda=True
+    )
+
+    model = Network(
+        uint8_augmentations_list=uint8_augmentations_list,
+        normalization_transform=(
+            v2.Normalize(dp.training_channel_means, dp.training_channel_stds)
+            if normalize
+            else None
+        ),
+    )
+else:
+    dp = DataPrepper(
+        val_ratio=0.2,
+        normalize=normalize,
+        uint8_augmentations_list=uint8_augmentations_list,
+    )
+    train_loader, test_loader, val_loader = dp.get_dataloaders(
+        batch_size=2048,
+        num_workers=2,
+        pin_memory=True,
+        preload_cuda=False,
+    )
+
+    model = Network()
+
 model.to("cuda")
-
 
 loss_fn = torch.nn.CrossEntropyLoss()
 
