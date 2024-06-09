@@ -145,10 +145,11 @@ class DataPrepper:
         self, preload_cuda=True, batch_size=32, num_workers=0, **kwargs
     ):
         if preload_cuda:
-            num_workers = 0
-            print(
-                "preloaded cuda tensors don't support num_workers > 0, setting num_workers=0"
-            )
+            if num_workers:
+                num_workers = 0
+                print(
+                    "preloaded cuda tensors don't support num_workers > 0, setting num_workers=0"
+                )
 
             train_set, test_set, val_set = self.get_cuda_preloaded_datasets()
         else:
