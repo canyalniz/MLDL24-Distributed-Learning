@@ -1,6 +1,7 @@
 import torch
 from DataPrep import DataPrepper
 from lars import LARSSGD
+from lamb import LAMBAdamW
 from ModelActions import train_for_epochs, train_for_epochs_preloaded_cuda
 from Network import Network
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -57,8 +58,9 @@ loss_fn = torch.nn.CrossEntropyLoss()
 
 writer = SummaryWriter()
 
-optimizer = torch.optim.SGD(model.parameters())
+# optimizer = torch.optim.SGD(model.parameters())
 # optimizer = LARSSGD(model.parameters(), lr=0.01)
+optimizer = LAMBAdamW(model.parameters(), lr=0.01)
 lr_scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=epochs)
 
 if preload_cuda:
