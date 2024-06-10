@@ -120,9 +120,9 @@ def _single_tensor_larssgd(
             else:
                 d_p = buf
 
-        layer_norm = vector_norm(param)
+        param_norm = vector_norm(param)
         update_norm = vector_norm(d_p)
 
-        local_lr = LARS_coefficient * layer_norm / update_norm
+        local_lr = LARS_coefficient * param_norm.div(update_norm)
 
         param.add_(d_p, alpha=-(lr * local_lr))
