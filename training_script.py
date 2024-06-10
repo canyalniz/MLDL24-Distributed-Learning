@@ -1,6 +1,6 @@
 import torch
 from DataPrep import DataPrepper
-from Optimizers import LARSSGD
+from lars import LARSSGD
 from ModelActions import train_for_epochs, train_for_epochs_preloaded_cuda
 from Network import Network
 from torch.optim.lr_scheduler import CosineAnnealingLR

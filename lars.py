@@ -82,8 +82,6 @@ class LARSSGD(torch.optim.SGD):
 
         return loss
 
-    # LARSSGD.__doc__ = r"""Implements stochastic gradient descent with LARS."""
-
 
 def _single_tensor_larssgd(
     params: List[Tensor],
