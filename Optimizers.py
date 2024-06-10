@@ -73,23 +73,6 @@ class LARSSGD(torch.optim.SGD):
                 found_inf=getattr(self, "found_inf", None),
                 LARS_coefficient=self.LARS_coefficient,
             )
-            # larssgd(
-            #     params,
-            #     grads,
-            #     momentum_buffer_list,
-            #     weight_decay=group["weight_decay"],
-            #     momentum=group["momentum"],
-            #     lr=group["lr"],
-            #     dampening=group["dampening"],
-            #     nesterov=group["nesterov"],
-            #     maximize=group["maximize"],
-            #     has_sparse_grad=has_sparse_grad,
-            #     foreach=group["foreach"],
-            #     fused=group["fused"],
-            #     grad_scale=getattr(self, "grad_scale", None),
-            #     found_inf=getattr(self, "found_inf", None),
-            #     LARS_coefficient=self.LARS_coefficient,
-            # )
 
             if group["momentum"] != 0:
                 # update momentum_buffers in state
@@ -100,47 +83,6 @@ class LARSSGD(torch.optim.SGD):
         return loss
 
     # LARSSGD.__doc__ = r"""Implements stochastic gradient descent with LARS."""
-
-
-def larssgd(
-    params: List[Tensor],
-    d_p_list: List[Tensor],
-    momentum_buffer_list: List[Optional[Tensor]],
-    # kwonly args with defaults are not supported by functions compiled with torchscript issue #70627
-    # setting this as kwarg for now as functional API is compiled by torch/distributed/optim
-    has_sparse_grad: bool = False,
-    foreach: Optional[bool] = None,
-    fused: Optional[bool] = None,
-    grad_scale: Optional[Tensor] = None,
-    found_inf: Optional[Tensor] = None,
-    *,
-    weight_decay: float,
-    momentum: float,
-    lr: float,
-    dampening: float,
-    nesterov: bool,
-    maximize: bool,
-    LARS_coefficient: float,
-):
-    r"""Functional API that performs LARSSGD algorithm computation.
-
-    See :class:`~torch.optim.SGD` for details.
-    """
-
-    _single_tensor_larssgd(
-        params,
-        d_p_list,
-        momentum_buffer_list,
-        weight_decay=weight_decay,
-        momentum=momentum,
-        lr=lr,
-        dampening=dampening,
-        nesterov=nesterov,
-        maximize=maximize,
-        grad_scale=grad_scale,
-        found_inf=found_inf,
-        LARS_coefficient=LARS_coefficient,
-    )
 
 
 def _single_tensor_larssgd(
