@@ -1,5 +1,5 @@
 import torch
-from DataPrep import DataPrepper
+from DataPrep import DataPrepper, DataPrepperCuda
 from lars import LARSSGD
 from lamb import LAMBAdamW
 from ModelActions import train_for_epochs, train_for_epochs_preloaded_cuda
@@ -12,28 +12,26 @@ from torch.utils.tensorboard import SummaryWriter
 # batchSizes = [2048]
 # weightDecay = [0.0001, 0.001, 0.0004]
 
-epochs = 100
+epochs = 5
 preload_cuda = True
 uint8_augmentations_list = [
     v2.RandomResizedCrop(size=(32, 32), antialias=True),
     v2.RandomHorizontalFlip(p=0.5),
 ]
 normalize = True
-
+num_folds = 1
 
 if preload_cuda:
-    dp = DataPrepper(
-        val_ratio=0.2,
-    )
-    train_loader, test_loader, val_loader = dp.get_dataloaders(
-        batch_size=2048, num_workers=0, preload_cuda=True
-    )
+    dp = DataPrepperCuda(val_ratio=0.2, num_folds=num_folds)
+
+    if num_folds == 1:
+        train_loader, val_loader, test_loader = dp.get_dataloaders(batch_size=2048)
 
     model = Network(
         uint8_augmentations_list=uint8_augmentations_list,
         normalization_transform=(
             v2.Normalize(dp.training_channel_means, dp.training_channel_stds)
-            if normalize
+            if normalize and num_folds == 1
             else None
         ),
     )
@@ -42,13 +40,14 @@ else:
         val_ratio=0.2,
         normalize=normalize,
         uint8_augmentations_list=uint8_augmentations_list,
+        num_folds=num_folds,
     )
-    train_loader, test_loader, val_loader = dp.get_dataloaders(
-        batch_size=2048,
-        num_workers=2,
-        pin_memory=True,
-        preload_cuda=False,
-    )
+    if num_folds == 1:
+        train_loader, val_loader, test_loader = dp.get_dataloaders(
+            batch_size=2048,
+            num_workers=5,
+            pin_memory=True,
+        )
 
     model = Network()
 
@@ -58,32 +57,72 @@ loss_fn = torch.nn.CrossEntropyLoss()
 
 writer = SummaryWriter()
 
-# optimizer = torch.optim.SGD(model.parameters())
+optimizer = torch.optim.SGD(model.parameters(), weight_decay=0.001, lr=0.1)
 # optimizer = LARSSGD(model.parameters(), lr=0.01)
-optimizer = LAMBAdamW(model.parameters(), lr=0.01)
+# optimizer = LAMBAdamW(model.parameters(), lr=0.01)
 lr_scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=epochs)
 
 if preload_cuda:
-    train_for_epochs_preloaded_cuda(
-        model,
-        train_loader,
-        optimizer=optimizer,
-        loss_fn=loss_fn,
-        val_loader=val_loader,
-        epochs=epochs,
-        epoch_lr_scheduler=lr_scheduler,
-        tb_writer=writer,
-        save_model_epochs_period=50,
-    )
+    if num_folds == 1:
+        train_for_epochs_preloaded_cuda(
+            model,
+            train_loader,
+            optimizer=optimizer,
+            loss_fn=loss_fn,
+            val_loader=val_loader,
+            epochs=epochs,
+            epoch_lr_scheduler=lr_scheduler,
+            tb_writer=writer,
+            save_model_epochs_period=50,
+        )
+    else:
+        for i, (train_loader, val_loader) in enumerate(
+            dp.get_k_fold_dataloaders(batch_size=2048)
+        ):
+            if normalize:
+                model.udpate_normalization_transform(
+                    v2.Normalize(
+                        dp.kfold_training_channel_means[i],
+                        dp.kfold_training_channel_stds[i],
+                    )
+                )
+
+            train_for_epochs_preloaded_cuda(
+                model,
+                train_loader,
+                optimizer=optimizer,
+                loss_fn=loss_fn,
+                val_loader=val_loader,
+                epochs=epochs,
+                epoch_lr_scheduler=lr_scheduler,
+                tb_writer=writer,
+                save_model_epochs_period=50,
+            )
 else:
-    train_for_epochs(
-        model,
-        train_loader,
-        optimizer=optimizer,
-        loss_fn=loss_fn,
-        val_loader=val_loader,
-        epochs=epochs,
-        epoch_lr_scheduler=lr_scheduler,
-        tb_writer=writer,
-        save_model_epochs_period=50,
-    )
+    if num_folds == 1:
+        train_for_epochs(
+            model,
+            train_loader,
+            optimizer=optimizer,
+            loss_fn=loss_fn,
+            val_loader=val_loader,
+            epochs=epochs,
+            epoch_lr_scheduler=lr_scheduler,
+            tb_writer=writer,
+            save_model_epochs_period=50,
+        )
+    else:
+        for i, (train_loader, val_loader) in enumerate(
+            dp.get_k_fold_dataloaders(batch_size=2048, num_workers=7, pin_memory=True)
+        ):
+            train_for_epochs(
+                model,
+                train_loader,
+                optimizer=optimizer,
+                loss_fn=loss_fn,
+                val_loader=val_loader,
+                epochs=epochs,
+                epoch_lr_scheduler=lr_scheduler,
+                tb_writer=writer,
+                save_model_epochs_period=50,
+            )

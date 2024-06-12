@@ -16,15 +16,26 @@ class Network(torch.nn.Module):
             torch.nn.Linear(192, 100),
         )
 
+        self.uint8_augmentations_list = uint8_augmentations_list
+
         input_transforms_list = [v2.ToDtype(torch.float32, scale=True)]
 
         if normalization_transform:
             input_transforms_list.append(normalization_transform)
 
         self.cpl_train_transform = v2.Compose(
-            uint8_augmentations_list + input_transforms_list
+            self.uint8_augmentations_list + input_transforms_list
         )
         self.cpl_val_transform = v2.Compose(input_transforms_list)
+
+    def udpate_normalization_transform(self, normalization_transform):
+        self.cpl_train_transform = v2.Compose(
+            self.uint8_augmentations_list
+            + [v2.ToDtype(torch.float32, scale=True), normalization_transform]
+        )
+        self.cpl_val_transform = v2.Compose(
+            [v2.ToDtype(torch.float32, scale=True), normalization_transform]
+        )
 
     def forward(self, input):
         return self.network_stack(input)
