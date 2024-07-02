@@ -25,7 +25,7 @@ if preload_cuda:
     dp = DataPrepperCuda(val_ratio=0.2, num_folds=num_folds)
 
     if num_folds == 1:
-        train_loader, val_loader, test_loader = dp.get_dataloaders(batch_size=2048)
+        train_loader, val_loader, test_loader = dp.dataloaders(batch_size=2048)
 
     model = Network(
         uint8_augmentations_list=uint8_augmentations_list,
@@ -43,7 +43,7 @@ else:
         num_folds=num_folds,
     )
     if num_folds == 1:
-        train_loader, val_loader, test_loader = dp.get_dataloaders(
+        train_loader, val_loader, test_loader = dp.dataloaders(
             batch_size=2048,
             num_workers=5,
             pin_memory=True,
@@ -77,7 +77,7 @@ if preload_cuda:
         )
     else:
         for i, (train_loader, val_loader) in enumerate(
-            dp.get_k_fold_dataloaders(batch_size=2048)
+            dp.k_fold_dataloaders(batch_size=2048)
         ):
             if normalize:
                 model.udpate_normalization_transform(
@@ -113,7 +113,7 @@ else:
         )
     else:
         for i, (train_loader, val_loader) in enumerate(
-            dp.get_k_fold_dataloaders(batch_size=2048, num_workers=7, pin_memory=True)
+            dp.k_fold_dataloaders(batch_size=2048, num_workers=7, pin_memory=True)
         ):
             train_for_epochs(
                 model,

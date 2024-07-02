@@ -66,7 +66,7 @@ class DataPrepper:
         )
         self.test_transforms_base = [v2.ToImage(), v2.ToDtype(dtype=torch.float32)]
 
-    def get_dataloaders(self, **kwargs):
+    def dataloaders(self, **kwargs):
         validation_subset = None
 
         train_transforms = self.train_transforms_base
@@ -143,7 +143,7 @@ class DataPrepper:
             DataLoader(self.cifar100_testing, **kwargs),
         )
 
-    def get_k_fold_dataloaders(self, **kwargs):
+    def k_fold_dataloaders(self, **kwargs):
         if self.num_folds < 2:
             raise ValueError(
                 "KFold cross validation can only be used with num_folds > 1"
@@ -248,7 +248,7 @@ class DataPrepperCuda:
             self.cifar100_testing.targets, device="cuda"
         )
 
-    def get_dataloaders(self, **kwargs):
+    def dataloaders(self, **kwargs):
         training_subset = TensorDataset(
             self.cifar100_training.data,
             self.cifar100_training.targets,
@@ -304,9 +304,89 @@ class DataPrepperCuda:
             self.cifar100_training.data.to(dtype=torch.float32).std(dim=(0, 2, 3)) / 255
         )
 
-        return DataLoader(training_subset, **kwargs)
+        return DataLoader(training_subset, **kwargs), DataLoader(
+            testing_subset, **kwargs
+        )
 
-    def get_k_fold_dataloaders(self, **kwargs):
+    def n_partitions_dataloaders(self, n, **kwargs):
+        testing_subset = TensorDataset(
+            self.cifar100_testing.data,
+            self.cifar100_testing.targets,
+        )
+
+        if self.val_ratio:
+            train_idx, val_idx = train_test_split(
+                np.arange(self.cifar100_training.__len__()), test_size=self.val_ratio
+            )
+            # training_subset, validation_subset = random_split(
+            #     self.cifar100_training, [1 - self.val_ratio, self.val_ratio]
+            # )
+
+            # train_idx = training_subset.indices
+            # val_idx = validation_subset.indices
+
+            self.training_channel_means = (
+                self.cifar100_training.data[train_idx].mean(
+                    dim=(0, 2, 3), dtype=torch.float32
+                )
+                / 255
+            )
+            self.training_channel_stds = (
+                self.cifar100_training.data[train_idx]
+                .to(dtype=torch.float32)
+                .std(dim=(0, 2, 3))
+                / 255
+            )
+
+            validation_subset = TensorDataset(
+                self.cifar100_training.data[val_idx],
+                self.cifar100_training.targets[val_idx],
+            )
+
+            # split the train_idx further into n partitions
+            partition = random_split(train_idx, n * [1 / n])
+
+            training_dataloaders = [
+                DataLoader(
+                    TensorDataset(
+                        self.cifar100_training.data[list(partition[i])],
+                        self.cifar100_training.targets[list(partition[i])],
+                    ),
+                    **kwargs
+                )
+                for i in range(n)
+            ]
+
+            return (
+                training_dataloaders,
+                DataLoader(validation_subset, **kwargs),
+                DataLoader(testing_subset, **kwargs),
+            )
+
+        self.training_channel_means = (
+            self.cifar100_training.data.mean(dim=(0, 2, 3), dtype=torch.float32) / 255
+        )
+        self.training_channel_stds = (
+            self.cifar100_training.data.to(dtype=torch.float32).std(dim=(0, 2, 3)) / 255
+        )
+
+        # split the training set into n partitions
+        partition = random_split(range(self.cifar100_training.__len__()), n * [1 / n])
+
+        training_dataloaders = [
+            DataLoader(
+                TensorDataset(
+                    self.cifar100_training.data[list(partition[i])],
+                    self.cifar100_training.targets[list(partition[i])],
+                ),
+                **kwargs
+            )
+            for i in range(n)
+        ]
+
+        return training_dataloaders, DataLoader(testing_subset, **kwargs)
+
+    def k_fold_dataloaders(self, **kwargs):
         if self.num_folds < 2:
             raise ValueError(
                 "KFold cross validation can only be used with num_folds > 1"
@@ -343,5 +423,55 @@ class DataPrepperCuda:
 
             yield (
                 DataLoader(training_subset, **kwargs),
+                DataLoader(validation_subset, **kwargs),
+            )
+
+    def k_fold_n_partition_dataloaders(self, n, **kwargs):
+        if self.num_folds < 2:
+            raise ValueError(
+                "KFold cross validation can only be used with num_folds > 1"
+            )
+
+        kfolder = KFold(n_splits=self.num_folds)
+        folds = kfolder.split(self.cifar100_training)
+
+        self.kfold_training_channel_means = torch.empty((self.num_folds, 3))
+        self.kfold_training_channel_stds = torch.empty((self.num_folds, 3))
+
+        for i, (train_idx, val_idx) in enumerate(folds):
+            self.kfold_training_channel_means[i] = (
+                self.cifar100_training.data[train_idx].mean(
+                    dim=(0, 2, 3), dtype=torch.float32
+                )
+                / 255
+            )
+            self.kfold_training_channel_stds[i] = (
+                self.cifar100_training.data[train_idx]
+                .to(dtype=torch.float32)
+                .std(dim=(0, 2, 3))
+                / 255
+            )
+
+            # split the train_idx further into n partitions
+            partition = random_split(train_idx, n * [1 / n])
+
+            training_dataloaders = [
+                DataLoader(
+                    TensorDataset(
+                        self.cifar100_training.data[list(partition[i])],
+                        self.cifar100_training.targets[list(partition[i])],
+                    ),
+                    **kwargs
+                )
+                for i in range(n)
+            ]
+
+            validation_subset = TensorDataset(
+                self.cifar100_training.data[val_idx],
+                self.cifar100_training.targets[val_idx],
+            )
+
+            yield (
+                training_dataloaders,
                 DataLoader(validation_subset, **kwargs),
             )
