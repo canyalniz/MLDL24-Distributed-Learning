@@ -12,7 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 # batchSizes = [2048]
 # weightDecay = [0.0001, 0.001, 0.0004]
 
-epochs = 5
+epochs = 1
 preload_cuda = True
 uint8_augmentations_list = [
     v2.RandomResizedCrop(size=(32, 32), antialias=True),

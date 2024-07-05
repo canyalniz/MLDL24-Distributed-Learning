@@ -2,7 +2,7 @@ import torch
 from DataPrep import DataPrepper, DataPrepperCuda
 from lars import LARSSGD
 from lamb import LAMBAdamW
-from DistributedModelActions import train_for_epochs_preloaded_cuda
+from DistributedModelActions import train_for_epochs_localsgd, train_for_epochs_slowmo
 from Network import Network
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torchvision.transforms import v2
@@ -23,7 +23,7 @@ uint8_augmentations_list = [
     v2.RandomHorizontalFlip(p=0.5),
 ]
 
-num_folds = 2
+num_folds = 1
 
 partitions = 8
 local_steps = 40
@@ -74,18 +74,32 @@ lr_scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=epochs)
 
 # if preload_cuda:
 if num_folds == 1:
-    train_for_epochs_preloaded_cuda(
+    train_for_epochs_slowmo(
         model,
         train_loaders,
-        optimizer=optimizer,
+        inner_optimizer=optimizer,
         loss_fn=loss_fn,
         val_loader=val_loader,
         epochs=epochs,
         cosine_annealing_scheduler=True,
         tb_writer=writer,
         save_model_epochs_period=50,
-        local_steps=local_steps,
+        inner_loop_steps=local_steps,
+        outer_lr=1,
+        outer_momentum_factor=0.5,
     )
+    # train_for_epochs_localsgd(
+    #     model,
+    #     train_loaders,
+    #     optimizer=optimizer,
+    #     loss_fn=loss_fn,
+    #     val_loader=val_loader,
+    #     epochs=epochs,
+    #     cosine_annealing_scheduler=True,
+    #     tb_writer=writer,
+    #     save_model_epochs_period=50,
+    #     local_steps=local_steps,
+    # )
 else:
     for i, (train_loaders, val_loader) in enumerate(
         dp.k_fold_n_partition_dataloaders(n=partitions, batch_size=batch_size)
@@ -98,7 +112,7 @@ else:
                 )
             )
 
-        train_for_epochs_preloaded_cuda(
+        train_for_epochs_localsgd(
             model,
             train_loaders,
             optimizer=optimizer,
