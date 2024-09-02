@@ -27,6 +27,11 @@ class Network(torch.nn.Module):
             self.uint8_augmentations_list + input_transforms_list
         )
         self.cpl_val_transform = v2.Compose(input_transforms_list)
+    
+    def reset(self):
+        for layer in self.network_stack:
+            if callable(getattr(layer, "reset_parameters", None)):
+                layer.reset_parameters()
 
     def udpate_normalization_transform(self, normalization_transform):
         self.cpl_train_transform = v2.Compose(
