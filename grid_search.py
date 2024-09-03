@@ -111,7 +111,7 @@ for lr, batch_size, wd in itertools.product(lr_space, batch_size_space, wd_space
                             dp.kfold_training_channel_stds[i],
                         )
                     )
-
+                fold_run_id = run_id + f"_{i}"
                 train_for_epochs_preloaded_cuda(
                     model,
                     train_loader,
@@ -122,7 +122,7 @@ for lr, batch_size, wd in itertools.product(lr_space, batch_size_space, wd_space
                     epoch_lr_scheduler=lr_scheduler,
                     tb_writer=writer,
                     save_model_epochs_period=50,
-                    run_id=run_id
+                    run_id=fold_run_id
                 )
     else:
         if num_folds == 1:
@@ -143,6 +143,7 @@ for lr, batch_size, wd in itertools.product(lr_space, batch_size_space, wd_space
             for i, (train_loader, val_loader) in enumerate(
                 dp.k_fold_dataloaders(batch_size=batch_size, num_workers=7, pin_memory=True)
             ):
+                fold_run_id = run_id + f"_{i}"
                 train_for_epochs(
                     model,
                     train_loader,
@@ -153,5 +154,5 @@ for lr, batch_size, wd in itertools.product(lr_space, batch_size_space, wd_space
                     epoch_lr_scheduler=lr_scheduler,
                     tb_writer=writer,
                     save_model_epochs_period=50,
-                    run_id=run_id
+                    run_id=fold_run_id
                 )
