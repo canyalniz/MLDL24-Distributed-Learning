@@ -113,6 +113,7 @@ for lr, batch_size, wd in itertools.product(lr_space, batch_size_space, wd_space
                         )
                     )
                 fold_run_id = run_id + f"_{i}"
+                writer = SummaryWriter("runs/"+fold_run_id)
                 train_for_epochs_preloaded_cuda(
                     model,
                     train_loader,
@@ -146,6 +147,7 @@ for lr, batch_size, wd in itertools.product(lr_space, batch_size_space, wd_space
             ):
                 model.reset()
                 fold_run_id = run_id + f"_{i}"
+                writer = SummaryWriter("runs/"+fold_run_id)
                 train_for_epochs(
                     model,
                     train_loader,
