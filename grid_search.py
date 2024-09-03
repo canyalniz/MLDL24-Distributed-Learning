@@ -104,6 +104,7 @@ for lr, batch_size, wd in itertools.product(lr_space, batch_size_space, wd_space
             for i, (train_loader, val_loader) in enumerate(
                 dp.k_fold_dataloaders(batch_size=batch_size)
             ):
+                model.reset()
                 if normalize:
                     model.udpate_normalization_transform(
                         v2.Normalize(
@@ -143,6 +144,7 @@ for lr, batch_size, wd in itertools.product(lr_space, batch_size_space, wd_space
             for i, (train_loader, val_loader) in enumerate(
                 dp.k_fold_dataloaders(batch_size=batch_size, num_workers=7, pin_memory=True)
             ):
+                model.reset()
                 fold_run_id = run_id + f"_{i}"
                 train_for_epochs(
                     model,
